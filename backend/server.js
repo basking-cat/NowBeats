@@ -1,37 +1,49 @@
+const cors = require("cors");
+
 const express = require("express");
 const axios = require("axios");
 const app = express();
-const port = 8082;
+app.use(cors());
+const port = 50059;
 require("dotenv").config();
-const cliendId = process.env.EXPO_PUBLIC_CLIENT_ID;
+const clientId = process.env.EXPO_PUBLIC_CLIENT_ID;
 const clientSecret = process.env.EXPO_PUBLIC_CLIENT_SECRET;
+const api_host = process.env.EXPO_API_HOST;
 // デバッグログを追加
 console.log("環境変数の確認:");
-console.log("CLIENT_ID:", cliendId);
+console.log("CLIENT_ID:", clientId);
 console.log("CLIENT_SECRET:", clientSecret);
+console.log("API HOST:", api_host);
 console.log("現在の作業ディレクトリ:", process.cwd());
-const cors = require("cors");
-app.use(cors());
 
 var admin = require("firebase-admin");
-var serviceAccount = require("/Users/riohazama/Downloads/nowbeats-59871-firebase-adminsdk-fbsvc-102582102f.json");
+const serviceAccount = JSON.parse(process.env.EXPO_FIREBASE_ADMIN_KEY);
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
+const db = admin.firestore();
 
-const redirectUri = `http://192.168.11.27:${port}/callback`;
+const redirectUri = `http://${api_host}:${port}/callback`;
 
 app.get("/login", (req, res) => {
   const scope = "user-read-currently-playing";
-  console.log("process.env.CLIENT_ID:", cliendId);
+  console.log("process.env.CLIENT_ID:", clientId);
+  if (clientId === undefined) {
+    console.error("cliendId is undefined");
+    return res.status(500).json({ error: "CLIENT_ID is not set" });
+  }
   console.log(redirectUri);
-  const authUrl = `https://accounts.spotify.com/authorize?response_type=code&client_id=${cliendId}&scope=${encodeURIComponent(
-    scope
-  )}&redirect_uri=${encodeURIComponent(redirectUri)}`;
-  console.log("Generated authUrl:", authUrl);
-  const response = { authUrl: authUrl };
-  console.log("Sending response:", response);
-  res.json(response);
+  try {
+    const authUrl = `https://accounts.spotify.com/authorize?response_type=code&client_id=${clientId}&scope=${encodeURIComponent(
+      scope
+    )}&redirect_uri=${redirectUri}`;
+    console.log("Generated authUrl:", authUrl);
+    const response = { authUrl: authUrl };
+    console.log("Sending response:", response);
+    return res.json(response);
+  } catch (e) {
+    console.error("[login]error occurred");
+  }
 });
 
 //login→callback周りの挙動理解する
@@ -125,7 +137,7 @@ app.get("/feed", async (req, res) => {
   }
 });
 
-app.listen(port, () => {
+app.listen(port, "0.0.0.0", () => {
   console.log(`Server is running on port ${port}`);
   console.log(`Login endpoint: http://localhost:${port}/login`);
   console.log(`Callback endpoint: http://localhost:${port}/callback`);
