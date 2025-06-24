@@ -9,7 +9,6 @@ import CallbackScreen from "./screens/CallbackScreen";
 const Stack = createStackNavigator();
 
 export default function App() {
-  console.log("process.env.CLIENT_ID", process.env.EXPO_PUBLIC_CLIENT_ID);
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Login">
