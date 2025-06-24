@@ -1,4 +1,5 @@
 import React from "react";
+import { EXPO_API_HOST } from "@env";
 import {
   Platform,
   Text,
@@ -8,39 +9,39 @@ import {
   Linking,
 } from "react-native";
 import axios from "axios";
-const port = 8082;
+const port = 50059;
 
 //OSによってapi urlを変える。どちらにおいてもlocalhostはエミュレータ自身を指すので、ホストマシンに辿り着けない
 function getApiUrl() {
+  print("LoginScreen: EXPO_API_HOST", EXPO_API_HOST);
   if (Platform.OS === "android") {
     return `http://10.0.2.2:${port}`;
   }
-  return `http://192.168.11.27:${port}`; //本当はipをpackage.jsonとかに書いてそれを参照した方がいいのかなぁ
+  return `http://${EXPO_API_HOST}:${port}`;
 }
 
 export default function LoginScreen({ navigation, count, setCount }) {
   const handleLogin = async () => {
-    try {
-      const apiUrl = `${getApiUrl()}/login`;
-      console.log("Attempting to connect to:", apiUrl);
-      const response = await axios.get(apiUrl);
-      console.log("Response status:", response.status);
-      console.log("Response headers:", response.headers);
-      console.log("Response data:", response.data);
-      console.log("Full response:", JSON.stringify(response, null, 2));
+    const apiUrl = `${getApiUrl()}/login`;
+    console.log("Attempting to connect to:", apiUrl);
+    // console.log("API URL:", getApiUrl());
 
-      if (!response.data.authUrl) {
+    try {
+      const res = await fetch(apiUrl);
+      const json = await res.json();
+
+      console.log("Auth URL:", json.authUrl);
+      console.log("Response status:", res.status);
+
+      if (!json.authUrl) {
         console.error("Auth URL is undefined");
       } else {
-        console.log("Auth URL:", response.data.authUrl);
+        console.log("Auth URL:", json.authUrl);
         // ブラウザで認証URLを開く
-        await Linking.openURL(response.data.authUrl);
+        await Linking.openURL(json.authUrl);
       }
-    } catch (error) {
-      console.error("Login error:", error);
-      if (error.response) {
-        console.error("Error response:", error.response.data);
-      }
+    } catch (err) {
+      console.log("Login error:", err.message);
     }
   };
 
